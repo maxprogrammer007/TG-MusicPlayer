@@ -1,0 +1,65 @@
+name: Friday
+
+on:
+  push:
+    branches: [ main ]
+    paths-ignore: 'README.md'
+  workflow_dispatch:
+    
+env:
+  GitHubMail: "iam.pro2@outlook.com"
+  GitHubName: "TechiError"
+  PIP_NO_CACHE_DIR: 1
+  LANG: "C.UTF-8"
+  GOOGLE_CHROME_DRIVER: "/usr/bin/chromedriver"
+  GOOGLE_CHROME_BIN: "/usr/bin/google-chrome-stable"
+jobs:
+  build:
+    runs-on: ubuntu-20.04
+
+    steps:
+       - name: Setup
+         run: |
+           sudo su
+           sudo -i
+           sudo rm -rf /usr/local/bin/npm /usr/local/share/man/man1/node* /usr/local/lib/dtrace/node.d ~/.npm ~/.node-gyp /opt/local/bin/node opt/local/include/node /opt/local/lib/node_modules
+           sudo rm -rf /usr/local/lib/node*
+           sudo rm -rf /usr/local/include/node*
+           sudo rm -rf /usr/local/bin/node*
+           sudo apt install software-properties-common
+           sudo add-apt-repository ppa:deadsnakes/ppa
+           sudo apt install python3.9
+           sudo rm -rf /usr/bin/python
+           if sudo [ ! -e /usr/bin/python ]; then sudo ln -sf /usr/bin/python3 /usr/bin/python; fi 
+           git config --global user.email ${GitHubMail}
+           git config --global user.name ${GitHubName}
+           git config --global credential.helper store
+           sudo echo "https://${GitHubName}:${{ secrets.GH_TOKEN }}@github.com" > ~/.git-credentials
+           sudo git clone https://github.com/TechiError/TG-MusicPlayer /app/
+           cd /app/
+           sudo sed -i.bak 's/us-west-2\.ec2\.//' /etc/apt/sources.list
+           sudo curl -sL https://deb.nodesource.com/setup_16.x -o nodesource_setup.sh
+           sudo bash nodesource_setup.sh
+           sudo apt-get install nodejs
+           sudo apt -qq update && apt -qq upgrade -y && \
+           sudo apt -qq install -y --no-install-recommends ffmpeg neofetch
+           sudo rm -rf /var/lib/apt/lists /var/cache/apt/archives /tmp/*
+           cd /app/
+           sudo pip3 install -U setuptools wheel && \
+           sudo pip3 install --no-cache-dir -r requirements.txt
+       - name: Running Friday
+         timeout-minutes: 350
+         continue-on-error: true
+         run: |
+           sudo wget ${{ secrets.CREDS }} -P /app/
+           cd /app/
+           sudo python3 main.py
+       - name: Loop workflow
+         continue-on-error: true
+         run: |
+           git clone -b main https://${{ secrets.GH_TOKEN }}@github.com/${GITHUB_REPOSITORY} loop
+           cd loop || exit 1
+           echo $(( RANDOM - ( RANDOM % RANDOM ) )) > looper.txt
+           git add looper.txt
+           git commit -m "Workflow : Loop at $(date -u +%D-%T%P)"
+           git push -q https://${{ secrets.GH_TOKEN }}@github.com/${GITHUB_REPOSITORY} HEAD:main
